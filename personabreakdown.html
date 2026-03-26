@@ -1,0 +1,1234 @@
+﻿import { useState, useMemo } from "react";
+
+
+// ══════════════════════════════════════════════
+// DATA LAYER
+// ══════════════════════════════════════════════
+
+
+const VERTICALS = [
+  { id: "fintech", label: "Fintech & Financial Services", icon: "🏦", color: "#0D4F6B" },
+  { id: "ecommerce", label: "E-Commerce & Retail", icon: "🛍️", color: "#8B2252" },
+  { id: "health", label: "Health, Fitness & Wellness", icon: "🏋️", color: "#1A6B3C" },
+  { id: "gaming", label: "Gaming", icon: "🎮", color: "#5C2D91" },
+  { id: "streaming", label: "Streaming & Media", icon: "📺", color: "#A63D6F" },
+  { id: "travel", label: "Travel & Hospitality", icon: "✈️", color: "#0B6E7F" },
+  { id: "ondemand", label: "On-Demand & Marketplace", icon: "🛵", color: "#B85C2A" },
+  { id: "b2b", label: "B2B & SaaS", icon: "💻", color: "#37474F" },
+];
+
+
+const PERSONAS = {
+  csuite: {
+    label: "C-Suite & Executive Marketing",
+    short: "C-Suite",
+    aliases: "CMO, Chief Growth Officer, Chief Digital Officer, VP/SVP/EVP of Marketing",
+    buyerType: "Economic Buyer",
+    buyerColor: "#E55039",
+    comp: "$300K–$1M+ base, heavy equity/LTI",
+    kpis: ["Revenue growth", "CAC (portfolio)", "LTV", "Brand health", "Market share", "ROMI", "NPS", "MAU & retention cohorts"],
+    topPains: [
+      "Data from different platforms never reconciles — Meta, Google, and attribution all report different numbers for the same conversions",
+      "Teams default to last-click numbers because they're easiest to pull, even though everyone knows they overstate bottom-of-funnel contribution",
+      "The board wants to see marketing's contribution to revenue but the attribution model can only claim credit for a fraction of actual conversions",
+    ],
+    branchValue: "Executive dashboards, cross-channel ROI clarity, single source of truth for board reporting",
+    discoveryQs: [
+      "How confident are you in the data your team presents to the board?",
+      "When Meta and Google report different numbers for the same conversions, how does your team decide which to believe?",
+      "How do you validate whether a growth bet is actually working?",
+    ],
+    verticals: {
+      fintech: "Title often becomes Chief Customer Officer. Close relationship with legal/compliance. Investor and advisor channel strategy adds complexity.",
+      ecommerce: "Often the most powerful exec — marketing spend is enormous and directly impacts quarterly revenue. Chief Growth Officer title increasingly common.",
+      health: "Background often in behavioral science or psychology. Complex regulatory environment around health claims and data privacy.",
+      gaming: "Usually VP/SVP of Marketing. Unusually data-driven — expected to understand performance marketing economics at a granular level.",
+      streaming: "Heavily oriented toward content marketing and cultural relevance. Generating cultural moments around content is a core competency.",
+      travel: "Joint responsibility for loyalty program strategy. Significant partnership management with co-brand credit card issuers.",
+      ondemand: "Managing fundamentally different marketing strategies for each side of the marketplace simultaneously.",
+      b2b: "More pipeline and revenue-oriented than brand-oriented. Evaluated on marketing-sourced pipeline and marketing-influenced revenue.",
+    },
+  },
+  brand: {
+    label: "Brand & Creative",
+    short: "Brand",
+    aliases: "VP of Brand Marketing, Creative Director, Brand Manager, Campaign Manager",
+    buyerType: "Influencer",
+    buyerColor: "#F6B93B",
+    comp: "$150K–$300K at director level",
+    kpis: ["Brand awareness", "Consideration", "Preference", "Purchase intent", "Share of voice", "Campaign reach", "Earned media value"],
+    topPains: [
+      "No reliable way to connect brand campaign exposure to downstream app installs or conversions",
+      "Brand and performance teams measure campaigns with completely different metrics",
+      "Deep link destinations drift as product teams update navigation without notifying marketing",
+    ],
+    branchValue: "Cross-channel brand campaign measurement, deep link standardization in brand toolkits, creative-level attribution",
+    discoveryQs: [
+      "How do you prove the ROI of your brand campaigns to leadership?",
+      "When a campaign launches, who owns the post-click experience?",
+      "How do your brand guidelines handle link naming conventions and UTM structures?",
+    ],
+    verticals: {
+      fintech: "Heavy compliance burden — every piece of creative must be reviewed by legal before it runs. Brand oriented around trust and security.",
+      ecommerce: "Very high velocity — seasonal campaigns and promotional events create an intense production cadence. Tension between promos and brand building.",
+      health: "Strict regulations around health claims. Brand identity deeply tied to community and transformation narratives.",
+      gaming: "Primarily a game marketing team — trailers, in-game event creative, launch campaigns. Extremely high creative bar.",
+      streaming: "Essentially a content marketing operation. Produces thousands of title-specific assets alongside brand-level campaigns.",
+      travel: "Dual mandate — marketing destinations AND the loyalty program as a product in its own right.",
+      ondemand: "Must market to two completely different audiences — customers and supply — with different emotional needs.",
+      b2b: "Smaller teams focused on thought leadership and case studies. More written than visual output.",
+    },
+  },
+  performance: {
+    label: "Performance Marketing & Paid Acquisition",
+    short: "Performance",
+    aliases: "VP of Performance Marketing, Head of Paid Media, UA Manager, Media Buyer",
+    buyerType: "Champion",
+    buyerColor: "#27AE60",
+    comp: "$150K–$250K at director level, 20–40% bonus tied to CPA/ROAS",
+    kpis: ["CPI", "CPA", "Cost per activated user", "ROAS", "CTR", "Conversion rate", "CAC", "Install-to-purchase rate", "Incrementality"],
+    topPains: [
+      "Platform-reported installs consistently higher than what attribution records — reconciling the gap consumes hours weekly",
+      "ATT opt-out means 50–70% of iOS traffic attributed probabilistically, reducing optimization confidence",
+      "LTV data by channel is unavailable or takes 30–90 days to mature, so budget decisions are based on short-term signals",
+    ],
+    branchValue: "Attribution dashboards for CPA/ROAS, cohort-level LTV by channel, fraud detection, cross-channel deduplication",
+    discoveryQs: [
+      "How do you deduplicate conversions across search, social, and affiliate?",
+      "How early can you predict user lifetime value by channel?",
+      "When attribution data and platform data disagree, which do you optimize toward?",
+    ],
+    verticals: {
+      fintech: "Regulatory constraints on targeting and disclosures. KPIs are cost per funded account, not just installs. Longer attribution chains.",
+      ecommerce: "Highest absolute dollar budgets. Most complex multi-channel attribution. Deeply involved in promotional strategy.",
+      health: "Heavily focused on Meta and TikTok video creative. Compliance review on health claims in ads. Extreme seasonality (January, spring).",
+      gaming: "Among the most analytically sophisticated UA teams anywhere. Hundreds of simultaneous campaigns. Day-7/30 ROAS as primary KPIs.",
+      streaming: "Focused on free trial conversion and downstream subscription retention. Must connect acquisition source to long-term subscription behavior.",
+      travel: "Dominated by search and metasearch. Enormous Google budgets. Constant tension between direct bookings and OTA partners.",
+      ondemand: "Parallel acquisition programs for both sides of the market with different KPIs, channels, and creative strategies.",
+      b2b: "More focused on lead gen than app installs. LinkedIn becomes critical. Longer sales cycles with demo/trial conversion events.",
+    },
+  },
+  product: {
+    label: "Product & App Marketing",
+    short: "Product Mktg",
+    aliases: "VP of Product Marketing, Head of Mobile Marketing, ASO Manager, GTM Manager",
+    buyerType: "Champion",
+    buyerColor: "#27AE60",
+    comp: "$160K–$280K at director level",
+    kpis: ["App store conversion rate", "Feature adoption", "Onboarding completion", "Install-to-activation", "Day-1/Day-7 retention", "ASO keyword rankings"],
+    topPains: [
+      "Launch timelines slip constantly because engineering dependencies cascade — marketing is the last to know",
+      "Deep link configs for launch campaigns are deprioritized by engineering, resulting in wrong landing destinations on launch day",
+      "Feature adoption data is in product analytics but not connected to acquisition source",
+    ],
+    branchValue: "Deep linking users into new features seamlessly, onboarding flow measurement, feature adoption by acquisition source",
+    discoveryQs: [
+      "Where do users drop off during onboarding?",
+      "How do you measure whether a product launch campaign drove actual feature use or just installs?",
+      "Who owns the deep link destinations when you launch a new feature?",
+    ],
+    verticals: {
+      fintech: "Unusually close to compliance and legal. Every product claim must meet regulatory standards. Requires deep financial literacy.",
+      ecommerce: "Heavily seasonal and promotional. Deeply involved in loyalty program features and personalization.",
+      health: "Tied to behavior change science. Messaging rooted in motivational psychology. Onboarding is disproportionately important.",
+      gaming: "Game marketing team — launch campaigns, live ops promotion, content calendars. ASO is particularly important for game discovery.",
+      streaming: "Split between platform product (app features) and content product (shows, music). Two different marketing surfaces.",
+      travel: "Focused on loyalty program as a product. Mobile check-in, boarding pass, room key features are key differentiators.",
+      ondemand: "Must serve both sides with fundamentally different product narratives — convenience vs. earnings/flexibility.",
+      b2b: "One of the most strategically important functions. Sales enablement is a core deliverable. Owns pricing and packaging.",
+    },
+  },
+  growth: {
+    label: "Growth & Analytics",
+    short: "Growth / Analytics",
+    aliases: "VP of Growth, Attribution Manager, Marketing Measurement Lead, Data Science Manager",
+    buyerType: "Champion / Evaluator",
+    buyerColor: "#27AE60",
+    comp: "$170K–$300K at director level",
+    kpis: ["Attribution coverage rate", "Measurement accuracy", "Incrementality lift", "MMM fit", "Data freshness", "Fraud rate", "SDK coverage", "Consent rate"],
+    topPains: [
+      "Attribution configurations drift silently — gaps accumulate as new campaigns, partners, and app versions are added",
+      "No formal change management process for attribution — one team member's changes create unexpected effects weeks later",
+      "Platform-reported, attributed, and CRM-recorded numbers never fully reconcile — stakeholders default to whichever supports their narrative",
+    ],
+    branchValue: "Attribution infrastructure administration, event pipelines into BI tools, incrementality test support, data quality monitoring",
+    discoveryQs: [
+      "How does your attribution data feed your LTV model?",
+      "How confident are you in your attribution governance?",
+      "When a performance anomaly appears, how long does it take to determine if it's real or a measurement artifact?",
+    ],
+    verticals: {
+      fintech: "Among the most sophisticated analytics functions. Stricter data governance. KPIs extend to long-term account value and attrition risk.",
+      ecommerce: "Enormous data volumes. Acute attribution challenge from channel proliferation. MMM is especially important.",
+      health: "Heavily focused on behavioral retention analytics — predicting long-term retention from early behaviors. Health data privacy adds complexity.",
+      gaming: "Most technically advanced analytics of any vertical. Predictive LTV modeling is a core competency driving every major decision.",
+      streaming: "Focused on content consumption patterns that predict subscription retention vs. churn.",
+      travel: "Measurement across unusually long, complex purchase journeys. Multi-touch attribution spanning weeks and multiple devices.",
+      ondemand: "Parallel measurement programs for both sides. Analytical challenge of understanding supply-demand interaction is unique.",
+      b2b: "Focused on pipeline attribution across long, multi-touch sales cycles. Account-level attribution is a unique challenge.",
+    },
+  },
+  crm: {
+    label: "CRM, Lifecycle & Retention",
+    short: "CRM / Lifecycle",
+    aliases: "VP of CRM, Director of Lifecycle Marketing, Head of Retention, Email Marketing Manager",
+    buyerType: "Champion",
+    buyerColor: "#27AE60",
+    comp: "$140K–$240K at director level",
+    kpis: ["Email open/CTR", "Push opt-in rate", "Day-7/30/90 retention", "Churn rate", "Reactivation rate", "Revenue per send", "LTV by cohort", "Renewal rate"],
+    topPains: [
+      "Deep links in automated journeys break when product navigation changes — users sent to error pages without anyone noticing",
+      "Journey performance data (opens, clicks) is available but connection to downstream in-app outcomes is not",
+      "Connecting acquisition source to lifecycle outcomes requires joining data across three systems with different user identifiers",
+    ],
+    branchValue: "Deep links in every CRM touchpoint, journey-level attribution, retention cohort analysis by acquisition source",
+    discoveryQs: [
+      "Are your lifecycle links routing users to the exact right in-app destination?",
+      "How do you measure whether your lifecycle journeys are actually driving retention vs. just generating opens?",
+      "When product updates change the app navigation, how does your CRM team find out?",
+    ],
+    verticals: {
+      fintech: "Manages highly sensitive communications — account alerts, security, balance updates. Drives single-product to multi-product adoption.",
+      ecommerce: "Very high frequency and volume. Complex deep linking to specific products/categories/promotions. Cart abandonment is core.",
+      health: "Primary mandate is habit reinforcement. Push notification strategy is high-stakes — helpful reminder vs. intrusive interruption.",
+      gaming: "Equivalent is live operations team. In-game event calendars, push strategy, win-back campaigns. Live ops drives IAP revenue.",
+      streaming: "Primary mandate is preventing churn before renewal dates. Deep links must route to specific recommended content.",
+      travel: "Inseparable from loyalty program management. Trip-window communications are highest-engagement lifecycle moments.",
+      ondemand: "Parallel lifecycle programs for customers and supply — entirely different strategies, KPIs, and deep link destinations.",
+      b2b: "Often called customer success marketing. Focus on feature adoption, onboarding completion, renewal, expansion.",
+    },
+  },
+  partnerships: {
+    label: "Partnerships & Affiliate Marketing",
+    short: "Partnerships",
+    aliases: "VP of Partnerships, Head of Affiliate Marketing, Channel Marketing Manager",
+    buyerType: "Champion",
+    buyerColor: "#27AE60",
+    comp: "$200K–$400K+ at VP level",
+    kpis: ["Partner-driven acquisitions", "Partner CPA", "Partner revenue", "Affiliate fraud rate", "Partner activation rate", "Partner LTV vs. direct"],
+    topPains: [
+      "Partner-reported conversion numbers consistently exceed attributed data — disputes delay payments and strain relationships",
+      "LTV data by acquisition source rarely available at granularity needed to assess whether a partner drives valuable users",
+      "Fraud in affiliate channels is systematically underestimated because signals are subtle",
+    ],
+    branchValue: "Partner-level attribution as payout source of truth, fraud detection, co-marketing link tracking, LTV by partner",
+    discoveryQs: [
+      "How do you detect affiliate leakage?",
+      "When partner-reported numbers don't match your attribution, how do you resolve the dispute?",
+      "How do you track employee wellness or employer program conversions?",
+    ],
+    verticals: {
+      fintech: "Partnerships are often the most financially significant channel. Co-brand credit card deals are multibillion-dollar arrangements.",
+      ecommerce: "Affiliate is a major acquisition channel. Deep linking to specific products is fundamental. Attribution integrity is a concern.",
+      health: "Employer and insurance company partnerships are growing. Corporate wellness activation flows directly tied to renewal decisions.",
+      gaming: "Focused on IP collaborations and platform distribution deals. Measuring player acquisition lift from collaborative events.",
+      streaming: "Centered on distribution — device manufacturers, telco bundles, smart TV platform deals.",
+      travel: "Co-brand credit card relationships, reciprocal earning, non-travel partner ecosystem. Complex deep linking requirements.",
+      ondemand: "Restaurant/merchant relationships on supply side. Consumer brand co-marketing. Dual attribution requirements.",
+      b2b: "System integrators, resellers, technology partners. Partner enablement with sales and marketing materials.",
+    },
+  },
+  social: {
+    label: "Social Media & Content",
+    short: "Social / Content",
+    aliases: "Head of Social Media, Director of Content Marketing, Influencer Marketing Manager, SEO Manager",
+    buyerType: "Influencer",
+    buyerColor: "#F6B93B",
+    comp: "$120K–$200K at director level",
+    kpis: ["Follower growth", "Organic reach", "Engagement rate", "Share of voice", "Video views", "Influencer CPI/CPA", "Branded search volume", "SEO rankings"],
+    topPains: [
+      "Influencer measurement is fundamentally broken — tracking links frequently not used correctly by creators",
+      "Deep links in social posts requiring app install frequently fail for users who don't have the app",
+      "Attributing installs to organic social requires tracking infrastructure most social teams don't own",
+    ],
+    branchValue: "Unique creator tracking links, social-to-app deep linking, organic attribution, dark social measurement",
+    discoveryQs: [
+      "How do you measure influencer campaign ROI beyond engagement metrics?",
+      "When someone clicks a link in your social post and doesn't have the app, what happens?",
+      "How much of your acquisition comes from dark social that you can't see?",
+    ],
+    verticals: {
+      fintech: "Significant compliance constraints. Educational content builds trust. Financial influencer marketing growing but heavily scrutinized.",
+      ecommerce: "Among the most prolific content producers. Influencer marketing highly performance-oriented — evaluated on attributed sales.",
+      health: "One of the most strategically important functions. Transformation stories drive enormous reach. Authenticity vetting critical.",
+      gaming: "Essentially community management — subreddits, Discord, creator ecosystems. Gaming creators among most powerful influencers.",
+      streaming: "Functions as cultural marketing operation. Social team's work around moments like Wrapped is inseparable from product identity.",
+      travel: "Heavy destination inspiration content. Inspiration drives awareness but path to booking is long and difficult to attribute.",
+      ondemand: "Separate presences for each side of marketplace with fundamentally different content strategies.",
+      b2b: "Oriented toward thought leadership, SEO, demand gen. Long-form content is primary format. KPIs around search rankings and pipeline.",
+    },
+  },
+  insights: {
+    label: "Customer Insights & Research",
+    short: "Insights",
+    aliases: "VP of Consumer Insights, Director of Market Research, UX Research Manager",
+    buyerType: "Influencer",
+    buyerColor: "#F6B93B",
+    comp: "$130K–$220K at director level",
+    kpis: ["Research quality/utilization", "Brand health tracking", "CSAT", "NPS", "Predictive model accuracy"],
+    topPains: [
+      "Behavioral event data access requires lengthy data request processes",
+      "Joining behavioral data with survey or CRM data requires common user identifiers that often don't exist",
+      "Personas are created during annual planning then treated as fixed truths — never updated with behavioral data",
+    ],
+    branchValue: "Branch journey data enriches behavioral analysis, cohort-based research recruitment, persona validation with real behavior",
+    discoveryQs: [
+      "How do you validate your personas against actual behavioral data?",
+      "Can your insights team access attribution data directly, or do they need to request it?",
+      "How often do your brand tracker results contradict what behavioral data shows?",
+    ],
+    verticals: {
+      fintech: "Focused on trust and anxiety research. Understanding emotional barriers to deeper financial engagement.",
+      ecommerce: "Significant shopper behavior and price sensitivity research. Loyalty program value perception directly informs design.",
+      health: "Particularly important — motivation and behavior change are psychologically complex. Emotional relationship research is key.",
+      gaming: "Player research is specialized — playtesting, community listening. More closely integrated with product than other verticals.",
+      streaming: "Content research is major focus — predicting which content investments drive acquisition and retention.",
+      travel: "Traveler decision journey research. Loyalty program perception research.",
+      ondemand: "Parallel research on both sides of marketplace.",
+      b2b: "Aligned with product research and competitive intelligence. Win/loss analysis is a core deliverable.",
+    },
+  },
+  comms: {
+    label: "Communications & PR",
+    short: "Comms / PR",
+    aliases: "Chief Communications Officer, VP of Corporate Communications, Director of Public Relations",
+    buyerType: "Influencer",
+    buyerColor: "#F6B93B",
+    comp: "$130K–$220K at director level",
+    kpis: ["Share of voice", "Coverage sentiment", "Tier-one placements", "Executive visibility", "Crisis response time", "PR impact on branded search/installs"],
+    topPains: [
+      "Links in press releases are almost never tracked — no measurement of PR-driven traffic",
+      "The connection between press coverage and business metrics is assumed but rarely measured",
+      "Communications is brought into launch planning too late for proper coordination",
+    ],
+    branchValue: "Tracked links in press materials, correlating coverage spikes with installs, PR campaign CTAs with attribution",
+    discoveryQs: [
+      "How do you measure the downstream impact of a major press hit on installs or signups?",
+      "When you distribute a press release digitally, are the links tracked?",
+      "How quickly can you correlate a news spike with changes in app traffic?",
+    ],
+    verticals: {
+      fintech: "Unusually high stakes — negative press on security or privacy can trigger rapid customer attrition. Regulatory comms is specialized.",
+      ecommerce: "High volume of product and promotional news. Supply chain and labor stories are reputational risks.",
+      health: "Tension between promoting health benefits and regulatory constraints on medical claims. Data privacy is major risk.",
+      gaming: "Focused on gaming press and creator community. Game launch reviews can make or break a title.",
+      streaming: "Managing corporate reputation AND publicity for individual content titles simultaneously.",
+      travel: "Constant operational disruptions requiring rapid, empathetic public response.",
+      ondemand: "Ongoing narratives around gig worker treatment, safety incidents, regulatory challenges.",
+      b2b: "Focused on analyst relations (Gartner, Forrester). Thought leadership positioning is primary strategy.",
+    },
+  },
+  loyalty: {
+    label: "Loyalty & Membership",
+    short: "Loyalty",
+    aliases: "VP of Loyalty Marketing, Director of Loyalty Programs, Loyalty Program Manager",
+    buyerType: "Champion",
+    buyerColor: "#27AE60",
+    comp: "$250K–$500K+ at VP level (travel/financial)",
+    kpis: ["Enrollment rate", "Active member rate", "Member vs. non-member retention", "Revenue per member", "Redemption rate", "Points liability", "Tier movement"],
+    topPains: [
+      "Rule changes require updates across multiple systems that are rarely coordinated — deep links referencing tier logic aren't updated in sync",
+      "Member segmentation requires data from three systems that rarely sync cleanly",
+      "Finance doesn't accept member vs. non-member comparisons as proof of ROI without incrementality tests",
+    ],
+    branchValue: "Deep linking into earn/burn flows, tier-aware routing, partner offer tracking, member journey attribution",
+    discoveryQs: [
+      "How do you measure loyalty-driven bookings or purchases?",
+      "When a member clicks a rewards notification, do they land exactly where they should?",
+      "How do you track the impact of partner earning opportunities?",
+    ],
+    verticals: {
+      fintech: "Loyalty mechanics embedded in the product itself. Rewards tied to account balances and trading activity.",
+      ecommerce: "Primary retention tool. Complex deep linking to personalized recommendations, exclusive sales, reward flows.",
+      health: "Behavioral rather than transactional — rewarding streaks, milestones, social activity. Corporate wellness adds B2B dimension.",
+      gaming: "Equivalent is live ops and season pass function. So central to game design it's almost entirely a product function.",
+      streaming: "Less developed — primary retention mechanism is content. Where loyalty exists, it's around bundling.",
+      travel: "Most strategically important marketing function. Extraordinarily complex ecosystem. Deep linking is fundamental.",
+      ondemand: "Programs like DashPass/Uber One represent shift from transactional to subscription relationships.",
+      b2b: "Appears as customer success programs, advocacy programs, community membership.",
+    },
+  },
+  apppm: {
+    label: "App Program Manager",
+    short: "App PM",
+    aliases: "Director of Mobile Programs, Head of App Operations, Mobile Release Manager",
+    buyerType: "Influencer / Champion",
+    buyerColor: "#3498DB",
+    comp: "$160K–$280K at director level",
+    kpis: ["Release cadence adherence", "Crash rate", "SDK health", "Deep link routing success rate", "Event tracking coverage", "Regression rate", "QA pass rate"],
+    topPains: [
+      "Marketing campaign launches depend on deep link configs not included in the release plan until last minute",
+      "SDK updates from attribution providers are treated as low-priority and accumulate technical debt",
+      "No systematic process for validating deep links and attribution events after each release — breakage discovered weeks later",
+    ],
+    branchValue: "SDK health monitoring, pre-release link validation, deep link destination registry, release confidence",
+    discoveryQs: [
+      "How do you QA deep links across releases?",
+      "How do you track SDK health across your release cycles?",
+      "When marketing needs a new deep link destination, what's the process and timeline?",
+    ],
+    verticals: {
+      fintech: "Most stringent compliance and security requirements. Every SDK must pass security review. Slower release cadences.",
+      ecommerce: "One of the most complex app ecosystems. Deep link complexity is high with constantly changing product catalog.",
+      health: "Unique privacy responsibilities around health data. Attribution SDKs must not transmit health data. Wearable integrations add complexity.",
+      gaming: "Among fastest release cadences — weekly updates. SDK management is complex with analytics, attribution, ad mediation, multiplayer SDKs.",
+      streaming: "Multiple device platforms — iOS, Android, smart TVs, consoles, web — each with own SDK, deep link config, and release cycle.",
+      travel: "App is mission-critical infrastructure — boarding pass, room key, loyalty wallet. Releases can't disrupt operational features.",
+      ondemand: "Coordinates two separate app binaries — customer and driver apps — with different schedules and SDK configurations.",
+      b2b: "Includes web app management alongside mobile. Deep links route to specific product workflows rather than content pages.",
+    },
+  },
+  engineer: {
+    label: "Technical / Engineer",
+    short: "Engineer",
+    aliases: "Mobile Engineer, iOS/Android Developer, SDK Integration Engineer, Platform Engineer",
+    buyerType: "Technical Evaluator",
+    buyerColor: "#3498DB",
+    comp: "$180K–$350K+ for senior; $200K–$400K for eng managers",
+    kpis: ["SDK integration quality", "Deep link routing reliability", "Event tracking accuracy", "Bug resolution time", "Test coverage", "App perf impact", "Platform compliance"],
+    topPains: [
+      "Universal Links and App Links are brittle — a misconfigured entitlement silently breaks all deep links without any visible error",
+      "Deep link testing is uniquely difficult to automate — simulating inter-app communication isn't natively supported by testing frameworks",
+      "Marketing requests are underspecified — 'add a deep link to the new feature' without defining edge case behavior",
+    ],
+    branchValue: "Clean APIs, comprehensive docs, migration guides, live link debugger, event validation console, test mode for CI/CD",
+    discoveryQs: [
+      "How long do SDK updates typically take your mobile team?",
+      "How do you handle deep links that require authentication?",
+      "What does your automated testing look like for deep link routing and event tracking?",
+    ],
+    verticals: {
+      fintech: "Strict security review for every SDK. Deep links must handle authentication correctly. More rigorous code review and slower releases.",
+      ecommerce: "Deep link routing to enormous, constantly changing product catalog. Dynamic deep linking is more technically complex here.",
+      health: "Must ensure attribution SDKs don't collect/transmit health data. Wearable integrations add cross-device complexity.",
+      gaming: "Unique performance constraints — SDKs evaluated for runtime CPU/memory impact on frame rates. High event volume requires efficient batching.",
+      streaming: "Deep linking across 5+ platforms (iOS, Android, smart TVs, web, consoles) — each with different technical constraints.",
+      travel: "Deep links into transactional flows requiring real-time data and authentication. Among highest deep link complexity.",
+      ondemand: "Separate codebases or SDK configs for customer and driver apps. Real-time aspects add destination complexity.",
+      b2b: "Deep linking into complex product workflows requiring specific permissions and account context. More granular event taxonomy.",
+    },
+  },
+};
+
+
+const MATRIX = {
+  gaming: [
+    { role: "performance", kpi: "D7/D30 ROAS", sdr: "How early can you predict player LTV?", ae: "Predictive LTV + blended attribution", am: "Expand to re-engagement + live ops tracking" },
+    { role: "growth", kpi: "Forecast accuracy", sdr: "How does attribution feed your LTV model?", ae: "Event-level exports + cohort modeling", am: "Add incrementality + warehouse automation" },
+    { role: "crm", kpi: "Event revenue lift", sdr: "How do you measure win-back impact?", ae: "Deep linking into live events", am: "Expand to push optimization + churn cohorts" },
+    { role: "apppm", kpi: "Release regression rate", sdr: "How do you QA deep links across live ops updates?", ae: "SDK health monitoring + pre-release link validation", am: "Expand to automated link testing in CI/CD" },
+    { role: "engineer", kpi: "SDK perf impact", sdr: "How long do SDK updates take your mobile team?", ae: "Clean APIs + migration guides + debug tools", am: "Expand to automated event validation + testing infra" },
+  ],
+  ecommerce: [
+    { role: "performance", kpi: "ROAS", sdr: "How do you dedupe search, social, affiliate?", ae: "Cross-channel attribution clarity", am: "Add MMM feeds + incrementality" },
+    { role: "crm", kpi: "Repeat purchase rate", sdr: "Are links routing to exact SKUs?", ae: "Dynamic + deferred deep linking", am: "Expand into browse/cart flows" },
+    { role: "partnerships", kpi: "Revenue integrity", sdr: "How do you detect affiliate leakage?", ae: "Fraud protection + attribution accuracy", am: "Add partner-level reporting" },
+    { role: "apppm", kpi: "Deep link success rate", sdr: "How do you keep promo links working during sale events?", ae: "Link destination registry + pre-launch QA", am: "Expand to automated link health monitoring" },
+    { role: "engineer", kpi: "Event tracking coverage", sdr: "How do you map deep links to a constantly changing catalog?", ae: "Dynamic routing APIs + event payload validation", am: "Expand to cross-platform link consistency" },
+  ],
+  fintech: [
+    { role: "performance", kpi: "Cost per funded account", sdr: "Do you optimize toward installs or funded accounts?", ae: "Full-funnel attribution", am: "Expand into multi-product LTV" },
+    { role: "product", kpi: "Onboarding completion", sdr: "Where do users drop in onboarding?", ae: "Secure deep linking", am: "Add cross-sell measurement" },
+    { role: "growth", kpi: "Long-term account value", sdr: "How confident are you in attribution governance?", ae: "Clean event pipelines", am: "Add advanced cohort modeling" },
+    { role: "apppm", kpi: "SDK compliance status", sdr: "How do you ensure SDK data practices pass security review?", ae: "Privacy nutrition label accuracy + compliance docs", am: "Expand to regulatory audit trail support" },
+    { role: "engineer", kpi: "Auth deep link success", sdr: "How do you handle deep links that require authentication?", ae: "Secure routing + session-aware link resolution", am: "Expand to multi-product deep link architecture" },
+  ],
+  travel: [
+    { role: "loyalty", kpi: "Member engagement", sdr: "How do you measure loyalty-driven bookings?", ae: "Deep linking into earn/burn flows", am: "Expand into partner reporting" },
+    { role: "performance", kpi: "Direct booking rate", sdr: "How do you measure web-to-app booking?", ae: "Cross-device attribution", am: "Add long journey cohort analysis" },
+    { role: "crm", kpi: "Trip engagement", sdr: "Are pre-trip messages routing into reservations?", ae: "Reservation-level deep linking", am: "Expand to in-destination flows" },
+    { role: "apppm", kpi: "Release quality score", sdr: "How do you prevent boarding pass flow breakage during releases?", ae: "Mission-critical QA + SDK update coordination", am: "Expand to multi-platform release sync" },
+    { role: "engineer", kpi: "Authenticated link reliability", sdr: "How do you deep link into reservation-specific screens?", ae: "Session-aware routing + real-time data loading", am: "Expand to cross-device identity resolution" },
+  ],
+  streaming: [
+    { role: "performance", kpi: "Trial → Paid", sdr: "Which channels drive subscribers who stay?", ae: "Install → trial → paid mapping", am: "Add retention-based optimization" },
+    { role: "crm", kpi: "Churn rate", sdr: "Do recommendation links open specific titles?", ae: "Title-level deep linking", am: "Expand to lifecycle-triggered automation" },
+    { role: "growth", kpi: "Cohort retention", sdr: "Can you attribute churn by source?", ae: "Subscriber cohort reporting", am: "Add predictive churn modeling" },
+    { role: "apppm", kpi: "Cross-platform link parity", sdr: "How do you keep deep links consistent across iOS, Android, TV, web?", ae: "Multi-platform SDK coordination + link registry", am: "Expand to smart TV + console SDK management" },
+    { role: "engineer", kpi: "Multi-platform routing", sdr: "How do you maintain link behavior across 5+ device types?", ae: "Platform-specific SDK configs + unified routing", am: "Expand to content-aware deep link resolution" },
+  ],
+  ondemand: [
+    { role: "performance", kpi: "Customer CAC", sdr: "Are you segmenting supply vs demand attribution?", ae: "Segmented reporting", am: "Expand into geo-optimization" },
+    { role: "crm", kpi: "Order frequency", sdr: "Do lifecycle links route into active offers?", ae: "Offer-level deep linking", am: "Expand to subscription tier tracking" },
+    { role: "partnerships", kpi: "Merchant activation", sdr: "How do you track driver campaign ROI?", ae: "Dual-sided attribution", am: "Add earnings engagement analysis" },
+    { role: "apppm", kpi: "Dual-app release sync", sdr: "How do you coordinate SDK updates across customer and driver apps?", ae: "Parallel release management + shared link standards", am: "Expand to unified measurement health dashboard" },
+    { role: "engineer", kpi: "Dual-app event accuracy", sdr: "How do you maintain event parity across two app binaries?", ae: "Shared event taxonomy + dual SDK configs", am: "Expand to real-time deep link destination routing" },
+  ],
+  health: [
+    { role: "performance", kpi: "Cost per active user", sdr: "How do you measure beyond installs to habit formation?", ae: "Activation-based attribution", am: "Expand to retention-optimized bidding" },
+    { role: "crm", kpi: "Habit retention rate", sdr: "Are reminders linking to the right workout or plan?", ae: "Behavior-triggered deep linking", am: "Expand to streak recovery + nudge optimization" },
+    { role: "partnerships", kpi: "Corporate activation rate", sdr: "How do you track employee wellness program conversions?", ae: "Partner attribution + activation flows", am: "Expand to employer reporting dashboards" },
+    { role: "apppm", kpi: "Health data compliance", sdr: "How do you ensure attribution SDKs don't transmit health data?", ae: "Privacy-scoped SDK configuration + audit support", am: "Expand to wearable device SDK coordination" },
+    { role: "engineer", kpi: "Wearable link routing", sdr: "How do you handle deep links across phone and watch apps?", ae: "Companion app routing + health data exclusion", am: "Expand to cross-device event correlation" },
+  ],
+  b2b: [
+    { role: "performance", kpi: "Cost per demo", sdr: "How do you tie ads to pipeline?", ae: "CRM-integrated attribution", am: "Add account-level reporting" },
+    { role: "product", kpi: "Feature adoption", sdr: "How do you measure onboarding drop-off?", ae: "In-app event tracking", am: "Expand to expansion attribution" },
+    { role: "growth", kpi: "Pipeline accuracy", sdr: "Where does marketing data break in CRM?", ae: "Revenue attribution infrastructure", am: "Add closed-loop reporting" },
+    { role: "apppm", kpi: "Web + mobile release sync", sdr: "How do you coordinate tracking changes across web and mobile?", ae: "Cross-platform release coordination + event parity", am: "Expand to feature flag + deep link sync" },
+    { role: "engineer", kpi: "Workflow deep link accuracy", sdr: "How do you deep link into permissioned product screens?", ae: "Role-aware routing + workflow event instrumentation", am: "Expand to expansion event tracking architecture" },
+  ],
+};
+
+
+// Key personas per vertical for multi-threading (ordered by buyer importance)
+const VERTICAL_KEY_PERSONAS = {
+  gaming: ["performance", "growth", "crm", "apppm", "engineer"],
+  ecommerce: ["performance", "crm", "partnerships", "apppm", "engineer"],
+  fintech: ["performance", "product", "growth", "apppm", "engineer"],
+  travel: ["loyalty", "performance", "crm", "apppm", "engineer"],
+  streaming: ["performance", "crm", "growth", "apppm", "engineer"],
+  ondemand: ["performance", "crm", "partnerships", "apppm", "engineer"],
+  health: ["performance", "crm", "partnerships", "apppm", "engineer"],
+  b2b: ["performance", "product", "growth", "apppm", "engineer"],
+};
+
+
+
+
+// ══════════════════════════════════════════════
+// COMPONENTS
+// ══════════════════════════════════════════════
+
+
+const S = {
+  fonts: `'Sora', sans-serif`,
+  display: `'Fraunces', serif`,
+  mono: `'JetBrains Mono', monospace`,
+  bg: "#F4F3F0",
+  dark: "#1C1917",
+  accent: "#DC4A2D",
+  accent2: "#2563EB",
+  muted: "#78716C",
+  border: "#E7E5E4",
+  card: "#FFFFFF",
+};
+
+
+function Tag({ children, color, bg }) {
+  return (
+    <span style={{
+      display: "inline-block",
+      padding: "3px 10px",
+      borderRadius: 5,
+      fontSize: 10.5,
+      fontWeight: 600,
+      fontFamily: S.mono,
+      color: color || S.dark,
+      background: bg || "#F5F5F4",
+      letterSpacing: 0.2,
+      whiteSpace: "nowrap",
+    }}>{children}</span>
+  );
+}
+
+
+function SectionHead({ children, sub }) {
+  return (
+    <div style={{ marginBottom: 12, marginTop: 24 }}>
+      <div style={{
+        fontFamily: S.mono,
+        fontSize: 9.5,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: 2.5,
+        color: S.accent,
+      }}>{children}</div>
+      {sub && <div style={{ fontFamily: S.fonts, fontSize: 12, color: S.muted, marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+}
+
+
+function CopyableBlock({ text, icon, accentColor }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div
+      onClick={() => { navigator.clipboard?.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+      style={{
+        padding: "11px 14px",
+        background: S.card,
+        borderRadius: 8,
+        border: `1px solid ${S.border}`,
+        fontSize: 12.5,
+        lineHeight: 1.65,
+        fontFamily: S.fonts,
+        color: "#44403C",
+        cursor: "pointer",
+        transition: "all 0.15s",
+        position: "relative",
+        borderLeft: accentColor ? `3px solid ${accentColor}` : undefined,
+      }}
+      title="Click to copy"
+    >
+      {icon && <span style={{ marginRight: 6 }}>{icon}</span>}
+      {text}
+      {copied && (
+        <span style={{
+          position: "absolute", top: 8, right: 10,
+          fontSize: 10, fontFamily: S.mono, color: "#16A34A",
+          fontWeight: 700,
+        }}>Copied ✓</span>
+      )}
+    </div>
+  );
+}
+
+
+
+
+// ── TAB 1: OUTREACH PREP (SDR focused) ──
+
+
+function OutreachPrepView({ selectedPersona, selectedVertical }) {
+  const p = PERSONAS[selectedPersona];
+  const v = VERTICALS.find(vt => vt.id === selectedVertical);
+  const matrixRow = selectedVertical && MATRIX[selectedVertical]
+    ? MATRIX[selectedVertical].find(r => r.role === selectedPersona)
+    : null;
+
+
+  if (!p) return <EmptyState icon="📋" text="Select a role to build your outreach brief" />;
+
+
+  return (
+    <div style={{ animation: "fadeSlide 0.25s ease" }}>
+      {/* Header */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+          <h2 style={{ fontFamily: S.display, fontSize: 24, fontWeight: 800, color: S.dark, margin: 0 }}>{p.short}</h2>
+          <Tag color={
+            p.buyerColor === "#F6B93B" ? "#92400E" :
+            p.buyerColor === "#27AE60" ? "#14532D" :
+            p.buyerColor === "#3498DB" ? "#1E3A5F" : p.buyerColor
+          } bg={p.buyerColor + "1A"}>{p.buyerType}</Tag>
+        </div>
+        <div style={{ fontFamily: S.fonts, fontSize: 12, color: S.muted, marginTop: 3 }}>{p.aliases}</div>
+      </div>
+
+
+      {/* Step 1: Know their KPI */}
+      <SectionHead sub="What they're measured on — use this to frame your outreach around their actual goals">① Know Their KPIs</SectionHead>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+        {p.kpis.map((k, i) => <Tag key={i} color="#1E3A5F" bg="#EFF6FF">{k}</Tag>)}
+      </div>
+      {selectedVertical && matrixRow && (
+        <div style={{
+          marginTop: 10, padding: "8px 12px",
+          background: v.color + "0C", borderRadius: 6,
+          border: `1px solid ${v.color}20`,
+          fontFamily: S.fonts, fontSize: 12, color: v.color, fontWeight: 600,
+        }}>
+          {v.icon} In {v.label}, the primary KPI is: <strong>{matrixRow.kpi}</strong>
+        </div>
+      )}
+
+
+      {/* Step 2: Lead with their pain */}
+      <SectionHead sub="Pick ONE of these as your email hook or cold call opener — written in their language, not yours">② Lead With Their Pain</SectionHead>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {p.topPains.map((pain, i) => (
+          <CopyableBlock key={i} text={pain} accentColor={S.accent} />
+        ))}
+      </div>
+      {selectedVertical && p.verticals[selectedVertical] && (
+        <>
+          <div style={{
+            marginTop: 10, padding: "11px 14px",
+            background: v.color + "08", borderRadius: 8,
+            border: `1px solid ${v.color}18`,
+            fontFamily: S.fonts, fontSize: 12.5, lineHeight: 1.65,
+            color: "#44403C", borderLeft: `3px solid ${v.color}`,
+          }}>
+            <span style={{ fontWeight: 700, color: v.color }}>{v.icon} Vertical angle: </span>
+            {p.verticals[selectedVertical]}
+          </div>
+        </>
+      )}
+
+
+      {/* Step 3: Your opening question */}
+      <SectionHead sub="Use the SDR entry question from the battle map, or pick from these discovery starters">③ Your Opening Question</SectionHead>
+      {matrixRow && (
+        <div style={{
+          padding: "14px 16px",
+          background: "#FEFCE8",
+          borderRadius: 8,
+          border: "1px solid #FEF08A",
+          fontFamily: S.fonts, fontSize: 13,
+          fontWeight: 600, color: "#713F12",
+          marginBottom: 8,
+        }}>
+          ⭐ Battle map entry: <em>"{matrixRow.sdr}"</em>
+        </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {p.discoveryQs.map((q, i) => (
+          <CopyableBlock key={i} text={q} icon="💬" accentColor="#16A34A" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+
+
+// ── TAB 2: DISCOVERY MODE (AE focused) ──
+
+
+function DiscoveryModeView({ selectedPersona, selectedVertical }) {
+  const p = PERSONAS[selectedPersona];
+  const v = VERTICALS.find(vt => vt.id === selectedVertical);
+  const matrixRow = selectedVertical && MATRIX[selectedVertical]
+    ? MATRIX[selectedVertical].find(r => r.role === selectedPersona)
+    : null;
+
+
+  if (!p) return <EmptyState icon="🔎" text="Select a role to load the discovery guide" />;
+
+
+  return (
+    <div style={{ animation: "fadeSlide 0.25s ease" }}>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+          <h2 style={{ fontFamily: S.display, fontSize: 24, fontWeight: 800, color: S.dark, margin: 0 }}>Discovery: {p.short}</h2>
+          <Tag color="#14532D" bg="#DCFCE7">{p.comp}</Tag>
+        </div>
+        <div style={{ fontFamily: S.fonts, fontSize: 12, color: S.muted, marginTop: 3 }}>
+          Prepare for discovery calls — understand what they do, where it breaks, and how to position Branch
+        </div>
+      </div>
+
+
+      {/* Their world */}
+      <SectionHead sub="Understand their daily reality so your questions feel informed, not generic">Their Pain Points — Ask About These</SectionHead>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {p.topPains.map((pain, i) => (
+          <div key={i} style={{
+            padding: "12px 14px",
+            background: S.card,
+            borderRadius: 8,
+            border: `1px solid ${S.border}`,
+            fontSize: 12.5,
+            lineHeight: 1.65,
+            fontFamily: S.fonts,
+            color: "#44403C",
+          }}>
+            <div style={{ fontFamily: S.mono, fontSize: 9.5, color: S.accent, fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>
+              Pain {i + 1} — Dig into this
+            </div>
+            {pain}
+            <div style={{
+              marginTop: 8, padding: "8px 10px",
+              background: "#F0FDF4", borderRadius: 6,
+              fontFamily: S.fonts, fontSize: 12,
+              color: "#166534", fontStyle: "italic",
+            }}>
+              Ask: "{p.discoveryQs[i]}"
+            </div>
+          </div>
+        ))}
+      </div>
+
+
+      {/* Position Branch */}
+      <SectionHead sub="After you've heard their pain, map Branch to the outcome they care about">Position Branch Around Their Outcome</SectionHead>
+      <div style={{
+        padding: "14px 16px",
+        background: "linear-gradient(135deg, #EFF6FF, #F0FDF4)",
+        borderRadius: 8,
+        border: `1px solid ${S.border}`,
+        fontFamily: S.fonts, fontSize: 13, lineHeight: 1.7,
+        color: "#1E3A5F",
+      }}>
+        <strong>Branch solves this by:</strong> {p.branchValue}
+      </div>
+
+
+      {matrixRow && (
+        <div style={{
+          marginTop: 10, padding: "12px 14px",
+          background: "#FEFCE8", borderRadius: 8,
+          border: "1px solid #FEF08A",
+          fontFamily: S.fonts, fontSize: 12.5, color: "#713F12",
+        }}>
+          <strong>AE positioning:</strong> {matrixRow.ae}
+          <br />
+          <strong>Expansion path:</strong> {matrixRow.am}
+        </div>
+      )}
+
+
+      {/* Vertical context */}
+      {selectedVertical && p.verticals[selectedVertical] && (
+        <>
+          <SectionHead sub="How this role operates differently in their industry — shows you've done your homework">{v.icon} Vertical Context</SectionHead>
+          <div style={{
+            padding: "14px 16px",
+            background: v.color + "08", borderRadius: 8,
+            border: `1px solid ${v.color}18`,
+            fontFamily: S.fonts, fontSize: 12.5, lineHeight: 1.7,
+            color: "#44403C", borderLeft: `3px solid ${v.color}`,
+          }}>
+            {p.verticals[selectedVertical]}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+
+
+
+// ── TAB 3: ACCOUNT PLANNING (Multi-thread) ──
+
+
+function AccountPlanView({ selectedVertical }) {
+  const v = VERTICALS.find(vt => vt.id === selectedVertical);
+  const matrixRows = selectedVertical ? (MATRIX[selectedVertical] || []) : [];
+  const keyPersonas = selectedVertical ? (VERTICAL_KEY_PERSONAS[selectedVertical] || []) : [];
+
+
+  if (!selectedVertical) return <EmptyState icon="🗺️" text="Select a vertical to see the account map and multi-threading plan" />;
+
+
+  return (
+    <div style={{ animation: "fadeSlide 0.25s ease" }}>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ fontFamily: S.display, fontSize: 24, fontWeight: 800, color: S.dark, margin: 0 }}>
+          {v.icon} {v.label} — Account Map
+        </h2>
+        <div style={{ fontFamily: S.fonts, fontSize: 12, color: S.muted, marginTop: 3 }}>
+          Who's in play, what each person cares about, and how to multi-thread the deal
+        </div>
+      </div>
+
+
+      {/* Visual map of personas */}
+      <SectionHead sub="Ordered by buyer importance — your champion is typically in the first 1–2 roles">Personas In Play</SectionHead>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {keyPersonas.map((pid, idx) => {
+          const p = PERSONAS[pid];
+          const mr = matrixRows.find(r => r.role === pid);
+          if (!p) return null;
+          return (
+            <div key={pid} style={{
+              padding: "14px 16px",
+              background: S.card,
+              borderRadius: 10,
+              border: `1px solid ${S.border}`,
+              borderLeft: `4px solid ${p.buyerColor}`,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                <span style={{
+                  fontFamily: S.mono, fontSize: 10, fontWeight: 700,
+                  color: "#fff", background: S.dark,
+                  padding: "1px 7px", borderRadius: 4,
+                }}>#{idx + 1}</span>
+                <span style={{ fontFamily: S.fonts, fontSize: 14, fontWeight: 700, color: S.dark }}>{p.short}</span>
+                <Tag color={
+                  p.buyerColor === "#F6B93B" ? "#92400E" :
+                  p.buyerColor === "#27AE60" ? "#14532D" :
+                  p.buyerColor === "#3498DB" ? "#1E3A5F" : p.buyerColor
+                } bg={p.buyerColor + "1A"}>{p.buyerType}</Tag>
+                {mr && <Tag color={v.color} bg={v.color + "12"}>KPI: {mr.kpi}</Tag>}
+              </div>
+
+
+              {mr && (
+                <div style={{ fontFamily: S.fonts, fontSize: 12, color: "#44403C", lineHeight: 1.6 }}>
+                  <div style={{ marginBottom: 4 }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 9.5, color: S.accent, fontWeight: 700 }}>SDR ENTRY → </span>
+                    <em>"{mr.sdr}"</em>
+                  </div>
+                  <div style={{ marginBottom: 4 }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 9.5, color: S.accent2, fontWeight: 700 }}>AE POSITION → </span>
+                    {mr.ae}
+                  </div>
+                  <div>
+                    <span style={{ fontFamily: S.mono, fontSize: 9.5, color: "#7C3AED", fontWeight: 700 }}>AM EXPAND → </span>
+                    {mr.am}
+                  </div>
+                </div>
+              )}
+
+
+              {p.verticals[selectedVertical] && (
+                <div style={{
+                  marginTop: 8, padding: "8px 10px",
+                  background: v.color + "08", borderRadius: 6,
+                  fontFamily: S.fonts, fontSize: 11.5, color: "#57534E",
+                  lineHeight: 1.6, fontStyle: "italic",
+                }}>
+                  {p.verticals[selectedVertical]}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+
+      {/* Multi-thread strategy */}
+      <SectionHead sub="Use this to build your deal narrative — Branch solves problems for multiple teams, not just one">Multi-Thread Strategy</SectionHead>
+      <div style={{
+        padding: "16px 18px",
+        background: "linear-gradient(135deg, #1C1917 0%, #292524 100%)",
+        borderRadius: 10,
+        fontFamily: S.fonts, fontSize: 12.5, lineHeight: 1.7,
+        color: "#D6D3D1",
+      }}>
+        <div style={{ fontFamily: S.mono, fontSize: 10, color: S.accent, fontWeight: 700, marginBottom: 8, letterSpacing: 1.5, textTransform: "uppercase" }}>
+          How to pitch the multi-team value
+        </div>
+        <div style={{ color: "#FAFAF9", fontWeight: 600, marginBottom: 6 }}>
+          "Branch doesn't just solve {PERSONAS[keyPersonas[0]]?.short}'s problem —"
+        </div>
+        {keyPersonas.slice(1).map((pid, i) => {
+          const p = PERSONAS[pid];
+          const mr = matrixRows.find(r => r.role === pid);
+          if (!p || !mr) return null;
+          return (
+            <div key={pid} style={{ paddingLeft: 12, borderLeft: `2px solid ${p.buyerColor}44`, marginBottom: 6 }}>
+              Your <strong style={{ color: "#FAFAF9" }}>{p.short}</strong> team gets <span style={{ color: p.buyerColor }}>{mr.ae}</span>
+            </div>
+          );
+        })}
+        <div style={{ marginTop: 10, color: "#A8A29E", fontStyle: "italic", fontSize: 12 }}>
+          → This increases deal size and builds a stronger business case before close.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+// ── TAB 4: PAIN LIBRARY ──
+
+
+function PainLibraryView({ selectedVertical, searchFilter }) {
+  const entries = Object.entries(PERSONAS);
+  const filtered = searchFilter
+    ? entries.filter(([id, p]) => {
+        const term = searchFilter.toLowerCase();
+        return p.short.toLowerCase().includes(term) ||
+          p.label.toLowerCase().includes(term) ||
+          p.topPains.some(pain => pain.toLowerCase().includes(term)) ||
+          p.aliases.toLowerCase().includes(term);
+      })
+    : entries;
+
+
+  return (
+    <div style={{ animation: "fadeSlide 0.25s ease" }}>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ fontFamily: S.display, fontSize: 24, fontWeight: 800, color: S.dark, margin: 0 }}>Pain Point Library</h2>
+        <div style={{ fontFamily: S.fonts, fontSize: 12, color: S.muted, marginTop: 3 }}>
+          Click any pain point to copy it for your outreach. {selectedVertical ? "Vertical context shown below each role." : "Select a vertical for industry-specific angles."}
+        </div>
+      </div>
+
+
+      {filtered.length === 0 && (
+        <div style={{ textAlign: "center", padding: 40, color: S.muted, fontFamily: S.fonts }}>
+          No matches for "{searchFilter}"
+        </div>
+      )}
+
+
+      {filtered.map(([id, p]) => {
+        const v = VERTICALS.find(vt => vt.id === selectedVertical);
+        return (
+          <div key={id} style={{ marginBottom: 22 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{
+                width: 8, height: 8, borderRadius: "50%",
+                background: p.buyerColor, flexShrink: 0,
+              }} />
+              <span style={{ fontFamily: S.fonts, fontSize: 13, fontWeight: 700, color: S.dark }}>{p.short}</span>
+              <span style={{ fontFamily: S.fonts, fontSize: 11, color: S.muted }}>— {p.buyerType}</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5, paddingLeft: 16 }}>
+              {p.topPains.map((pain, i) => (
+                <CopyableBlock key={i} text={pain} accentColor={S.accent} />
+              ))}
+              {selectedVertical && p.verticals[selectedVertical] && (
+                <div style={{
+                  padding: "9px 14px",
+                  background: v.color + "08", borderRadius: 7,
+                  border: `1px solid ${v.color}15`,
+                  fontFamily: S.fonts, fontSize: 12, lineHeight: 1.6,
+                  color: "#57534E", fontStyle: "italic",
+                  borderLeft: `3px solid ${v.color}`,
+                }}>
+                  <span style={{ fontWeight: 700, fontStyle: "normal", color: v.color }}>{v.icon} </span>
+                  {p.verticals[selectedVertical]}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+function EmptyState({ icon, text }) {
+  return (
+    <div style={{
+      textAlign: "center", padding: "70px 20px",
+      color: S.muted, fontFamily: S.fonts,
+    }}>
+      <div style={{ fontSize: 36, marginBottom: 10 }}>{icon}</div>
+      <div style={{ fontSize: 14, fontWeight: 500 }}>{text}</div>
+    </div>
+  );
+}
+
+
+
+
+// ══════════════════════════════════════════════
+// MAIN APP
+// ══════════════════════════════════════════════
+
+
+const TABS = [
+  { id: "outreach", label: "Outreach Prep", sub: "SDR", icon: "📋" },
+  { id: "discovery", label: "Discovery Mode", sub: "AE", icon: "🔎" },
+  { id: "account", label: "Account Plan", sub: "AE/AM", icon: "🗺️" },
+  { id: "painlib", label: "Pain Library", sub: "All", icon: "⚡" },
+];
+
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState("outreach");
+  const [selectedPersona, setSelectedPersona] = useState("performance");
+  const [selectedVertical, setSelectedVertical] = useState("");
+  const [painSearch, setPainSearch] = useState("");
+
+
+  const showPersonaSidebar = activeTab !== "account";
+
+
+  return (
+    <div style={{ minHeight: "100vh", background: S.bg }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,700;9..144,800;9..144,900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+        @keyframes fadeSlide { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #D6D3D1; border-radius: 3px; }
+      `}</style>
+
+
+      {/* ─── HEADER ─── */}
+      <div style={{
+        background: S.dark,
+        padding: "20px 24px 0",
+      }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{
+            fontFamily: S.mono, fontSize: 9, fontWeight: 700,
+            textTransform: "uppercase", letterSpacing: 3,
+            color: S.accent, marginBottom: 5,
+          }}>Branch Sales Enablement</div>
+          <h1 style={{
+            fontFamily: S.display, fontSize: 26, fontWeight: 900,
+            color: "#FAFAF9", margin: 0, letterSpacing: -0.3,
+          }}>Persona Navigator</h1>
+          <p style={{ fontFamily: S.fonts, fontSize: 12, color: "#78716C", margin: "4px 0 0" }}>
+            Pick your workflow → Select vertical & role → Get what you need in 30 seconds
+          </p>
+
+
+          {/* Tabs */}
+          <div style={{ display: "flex", gap: 3, marginTop: 16 }}>
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  padding: "9px 16px",
+                  border: "none",
+                  borderRadius: "8px 8px 0 0",
+                  background: activeTab === tab.id ? S.bg : "transparent",
+                  color: activeTab === tab.id ? S.dark : "#78716C",
+                  fontFamily: S.fonts,
+                  fontSize: 12.5,
+                  fontWeight: activeTab === tab.id ? 700 : 500,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+                <span style={{
+                  fontFamily: S.mono, fontSize: 9, fontWeight: 600,
+                  background: activeTab === tab.id ? S.accent + "18" : "rgba(255,255,255,0.08)",
+                  color: activeTab === tab.id ? S.accent : "#A8A29E",
+                  padding: "1px 6px", borderRadius: 4,
+                }}>{tab.sub}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+
+      {/* ─── BODY ─── */}
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 24px 60px" }}>
+        {/* Vertical selector */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{
+            fontFamily: S.mono, fontSize: 9, fontWeight: 700,
+            textTransform: "uppercase", letterSpacing: 2,
+            color: S.muted, marginBottom: 7,
+          }}>Vertical</div>
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            <button
+              onClick={() => setSelectedVertical("")}
+              style={{
+                padding: "5px 12px", borderRadius: 6,
+                border: !selectedVertical ? `2px solid ${S.dark}` : `1px solid ${S.border}`,
+                background: !selectedVertical ? S.dark : S.card,
+                color: !selectedVertical ? "#fff" : S.muted,
+                fontFamily: S.fonts, fontSize: 11.5, fontWeight: 600,
+                cursor: "pointer", transition: "all 0.15s",
+              }}
+            >All</button>
+            {VERTICALS.map(vt => (
+              <button
+                key={vt.id}
+                onClick={() => setSelectedVertical(vt.id)}
+                style={{
+                  padding: "5px 12px", borderRadius: 6,
+                  border: selectedVertical === vt.id ? `2px solid ${vt.color}` : `1px solid ${S.border}`,
+                  background: selectedVertical === vt.id ? vt.color : S.card,
+                  color: selectedVertical === vt.id ? "#fff" : "#57534E",
+                  fontFamily: S.fonts, fontSize: 11.5, fontWeight: 600,
+                  cursor: "pointer", transition: "all 0.15s",
+                }}
+              >{vt.icon} {vt.label}</button>
+            ))}
+          </div>
+        </div>
+
+
+        {/* Main layout */}
+        <div style={{ display: "flex", gap: 20 }}>
+          {/* Persona sidebar */}
+          {showPersonaSidebar && (
+            <div style={{ width: 165, flexShrink: 0 }}>
+              <div style={{
+                fontFamily: S.mono, fontSize: 9, fontWeight: 700,
+                textTransform: "uppercase", letterSpacing: 2,
+                color: S.muted, marginBottom: 7,
+              }}>Role</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                {Object.entries(PERSONAS).map(([id, p]) => (
+                  <button
+                    key={id}
+                    onClick={() => setSelectedPersona(id)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      padding: "8px 11px", borderRadius: 7,
+                      border: selectedPersona === id ? `2px solid ${S.dark}` : "2px solid transparent",
+                      background: selectedPersona === id ? S.dark : "transparent",
+                      color: selectedPersona === id ? "#FAFAF9" : "#57534E",
+                      fontFamily: S.fonts, fontSize: 12, fontWeight: 600,
+                      cursor: "pointer", transition: "all 0.15s",
+                      textAlign: "left", width: "100%",
+                    }}
+                  >
+                    <span style={{
+                      width: 7, height: 7, borderRadius: "50%",
+                      background: p.buyerColor, flexShrink: 0,
+                    }} />
+                    {p.short}
+                  </button>
+                ))}
+              </div>
+
+
+              {/* Legend */}
+              <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${S.border}` }}>
+                <div style={{
+                  fontFamily: S.mono, fontSize: 8, fontWeight: 700,
+                  textTransform: "uppercase", letterSpacing: 2,
+                  color: "#A8A29E", marginBottom: 6,
+                }}>Buyer Role</div>
+                {[
+                  { c: "#E55039", l: "Economic Buyer" },
+                  { c: "#27AE60", l: "Champion" },
+                  { c: "#F6B93B", l: "Influencer" },
+                  { c: "#3498DB", l: "Tech Evaluator" },
+                ].map(r => (
+                  <div key={r.l} style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    fontSize: 10, fontFamily: S.fonts, color: "#A8A29E", marginBottom: 3,
+                  }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: r.c, flexShrink: 0 }} />
+                    {r.l}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+
+          {/* Content area */}
+          <div style={{
+            flex: 1,
+            background: S.card,
+            borderRadius: 12,
+            padding: "22px 26px",
+            border: `1px solid ${S.border}`,
+            minHeight: 480,
+            overflowY: "auto",
+            maxHeight: "78vh",
+          }}>
+            {activeTab === "outreach" && (
+              <OutreachPrepView selectedPersona={selectedPersona} selectedVertical={selectedVertical} />
+            )}
+            {activeTab === "discovery" && (
+              <DiscoveryModeView selectedPersona={selectedPersona} selectedVertical={selectedVertical} />
+            )}
+            {activeTab === "account" && (
+              <AccountPlanView selectedVertical={selectedVertical} />
+            )}
+            {activeTab === "painlib" && (
+              <>
+                <div style={{ marginBottom: 14 }}>
+                  <input
+                    type="text"
+                    placeholder="Search pain points, roles, or keywords..."
+                    value={painSearch}
+                    onChange={e => setPainSearch(e.target.value)}
+                    style={{
+                      width: "100%", padding: "10px 14px",
+                      borderRadius: 8, border: `1px solid ${S.border}`,
+                      fontFamily: S.fonts, fontSize: 13,
+                      outline: "none", background: "#FAFAF9",
+                    }}
+                  />
+                </div>
+                <PainLibraryView selectedVertical={selectedVertical} searchFilter={painSearch} />
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
